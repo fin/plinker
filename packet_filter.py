@@ -1,8 +1,9 @@
 from threading import Thread
 import time
+import json
 
 # global variables
-value_global = "5"
+value_global = []
 
 def main():    
     network_interface = "eth0"
@@ -14,9 +15,11 @@ def main():
     raw_input("press [enter] to stop.\n")
 
     # change value_global
-    value_global = "23"
+    value_global.append(15) 
 
     raw_input("press [enter] to stop.\n")
+
+    print value_global
 
     # setting status to false ends the threadss
     network_traffic.status = False
@@ -29,7 +32,7 @@ class communication_thread(Thread):
         Thread.__init__(self)
         self.timeout = timeout
         self.mode = mode
-        self.value =         
+        self.value = 1
 
         # the interval in which the synchronized mode
         # sends data to chuck in seconds.
@@ -48,7 +51,9 @@ class communication_thread(Thread):
             # synchronus mode. every n (interval) seconds we send 
             # the data to chuck
             while self.status == True:
-                print "synchronus. waiting a second. value: " + value_global
+                print "synchronus. waiting a second. value: " + json.dumps(value_global)
+                value_global.append(self.value)
+                self.value+=1
                 time.sleep(self.interval)
 
 main()

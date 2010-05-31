@@ -2,12 +2,14 @@ import pcapy
 from scapy.layers.all import IP, Ether,ICMP, TCP
 import pydb
 import netifaces
+import OSC            # pyOSC
 
 interface = 'wlan0'
 interface_address = netifaces.ifaddresses(interface)[2][0]['addr']
 print interface_address
 
 p = pcapy.open_live(interface, 1024, False, 10240)
+#p = pcapy.open_offline('test.tcpdump')
 
 summary_in = {}
 summary_out = {}
@@ -19,12 +21,7 @@ try:
         t = e.getlayer(TCP)
         if t:
             i = e.getlayer(IP)
-            print i.dst
-            print interface_address
             if i.dst==interface_address:
-                print 'incoming'
-                print t.dport
-                print t.sport
                 summary_in.setdefault(t.dport,0)
                 summary_in[t.dport]+=1
             else:
