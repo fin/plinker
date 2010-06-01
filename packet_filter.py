@@ -3,7 +3,7 @@ import time
 import json
 
 # global variables
-value_global = []
+value_global = {}
 
 def main():    
     network_interface = "eth0"
@@ -12,10 +12,12 @@ def main():
     network_traffic = communication_thread("no_icmp", 100)
     network_traffic.start()
 
+    value_global.update({'bar': 'foo'}) 
+
     raw_input("press [enter] to stop.\n")
 
     # change value_global
-    value_global.append(15) 
+    value_global.update({'foo': 'bar'}) 
 
     raw_input("press [enter] to stop.\n")
 
@@ -46,14 +48,19 @@ class communication_thread(Thread):
             # send them directly to chuck via osc      
             while self.status == True:
                 print "asynchronus."  
+                # send data to chuck, if data is available
+                # remove values in array
 
         else:
             # synchronus mode. every n (interval) seconds we send 
             # the data to chuck
             while self.status == True:
                 print "synchronus. waiting a second. value: " + json.dumps(value_global)
-                value_global.append(self.value)
                 self.value+=1
+                # send data to chuck
+                # remove values in array                
+                value_global.clear()
+                # wait
                 time.sleep(self.interval)
 
 main()
