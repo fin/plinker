@@ -1,3 +1,4 @@
+from optparse import OptionParser
 from threading import Thread
 import time
 import json
@@ -6,25 +7,36 @@ import pcapy
 from scapy.layers.all import IP, Ether,ICMP, TCP
 import pydb
 import netifaces
-#import OSC            # pyOSC
+import OSC            # pyOSC
+
+
+
+parser = OptionParser()
+parser.add_option('-c', '--connect', default='localhost:9999', help='osc host:port to connect to')
+parser.add_option('-i', '--interface', default='eth0', help='network interface to listen on')
+
+(options, args) = parser.parse_args()
+print options
+print args
 
 # global variables
 nw_traffic_in_global = {}
 nw_traffic_out_global = {}
 icmp_traffic_global = {}
 
-def main():    
+
+def main():
+    kbints = 0
+
+    # begin listening to network traffic
+    interface = options['interface']
+    interface_address = netifaces.ifaddresses(interface)[2][0]['addr']
 
     # create and start threads
     network_traffic = communication_thread("no_icmp")
     network_traffic.start()
     icmp_traffic = communication_thread("only_icmp")
     icmp_traffic.start()
-
-    # begin listening to network traffic
-    interface = 'eth0'
-    interface_address = netifaces.ifaddresses(interface)[2][0]['addr']
-    print interface_address
 
     p = pcapy.open_live(interface, 1024, False, 10240)
 
@@ -48,7 +60,11 @@ def main():
             second = header.getts()[0] # [1] = miliseconds
             (header, payload) = p.next()
     except KeyboardInterrupt:
-        pass
+        print 'kbint %d' % kbints
+        kbints+=1
+        if kbints>2:
+            print 'quitting %d' % kbints
+            return
     except Exception,e:
         print e
     
