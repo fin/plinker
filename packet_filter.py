@@ -19,6 +19,13 @@ parser.add_option('-i', '--interface', default='eth0', help='network interface t
 print options
 print args
 
+hostport = options.connect.split(':')
+hostport[1] = int(hostport[1])
+hostport = tuple(hostport)
+
+oc = OSC.OSCClient()
+oc.connect(hostport)
+
 # global variables
 nw_traffic_in_global = {}
 nw_traffic_out_global = {}
@@ -29,7 +36,7 @@ def main():
     kbints = 0
 
     # begin listening to network traffic
-    interface = options['interface']
+    interface = options.interface
     interface_address = netifaces.ifaddresses(interface)[2][0]['addr']
 
     # create and start threads
@@ -55,7 +62,11 @@ def main():
                     nw_traffic_out_global[t.dport]+=1
                     
             if e.haslayer(ICMP):
-                icmp_traffic_global.update({'ping': True})
+                x = OSC.OSCMessage()
+                x.setAddress('/plinker/ping')
+                x.append(1)
+                oc.send(x)
+                print 'sent'
 
             second = header.getts()[0] # [1] = miliseconds
             (header, payload) = p.next()
@@ -75,6 +86,7 @@ def main():
     
     #bar.status = False
     print "goodbye"
+    oc.close()
 
 # thread class
 class communication_thread(Thread):
