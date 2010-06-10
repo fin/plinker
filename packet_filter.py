@@ -120,13 +120,13 @@ class communication_thread(Thread):
                 # send data to chuck
                 # remove values in array
                 s = 0
-                for (key, value) in new_traffic_in_global:
+                for (key, value) in nw_traffic_in_global:
                     x = OSC.OSCMessage()
                     x.setAddress('/plinker/in/port/%s' % key)
                     x.append(value)
                     oc.send(x)
                     s+=value
-                for (key, value) in new_traffic_out_global:
+                for (key, value) in nw_traffic_out_global:
                     x = OSC.OSCMessage()
                     x.setAddress('/plinker/out/port/%s' % key)
                     x.append(value)
