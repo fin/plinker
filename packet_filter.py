@@ -108,35 +108,45 @@ class communication_thread(Thread):
         self.status = True
         
     def run(self):
+        traffic_in_last = {}
+        traffic_out_last = {}
         while self.status:
             print self.status
             traffic_in = copy.copy(nw_traffic_in_global)
             traffic_out = copy.copy(nw_traffic_in_global)
             nw_traffic_in_global.clear()
-            nw_traffic_out_global.clear()                
-            print "inbound : " + json.dumps(traffic_in)
-            print "outbound: " + json.dumps(traffic_out)
+            nw_traffic_out_global.clear()
+
             # send data to chuck
             # remove values in array
             s = 0
-            for key in traffic_in.keys():
-                value = traffic_in[key]
+            keys = traffic_in.keys()
+            keys.extend(traffic_in_last.keys())
+            for key in keys:
+                current = float(traffic_in.get(key,0))
+                if current:
+                    current/=traffic_in_last.get(key,current)
                 x = OSC.OSCMessage()
-                x.setAddress('/plinker/in/port/%s' % key)
-                x.append(value)
+                x.setAddress('/plinker/in/port/%s' % current)
+                x.append(float(current))
                 oc.send(x)
-                s+=value
-            for key in traffic_out.keys():
-                value = traffic_out[key]
+                print (key, current)
+
+            keys = traffic_out.keys()
+            keys.extend(traffic_out_last.keys())
+            for key in keys:
+                current = float(traffic_out.get(key,0))
+                if current:
+                    current/=traffic_out_last.get(key,current)
                 x = OSC.OSCMessage()
                 x.setAddress('/plinker/out/port/%s' % key)
-                x.append(value)
+                x.append(float(current))
                 oc.send(x)
-                s+=value
-            x = OSC.OSCMessage()
-            x.setAddress('/plinker/all')
-            x.append(s)
-            oc.send(x)
+                print (key, current)
+
+            traffic_in_last = traffic_in
+            traffic_out_last = traffic_out
+
             # wait
             time.sleep(self.interval)
 
