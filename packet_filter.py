@@ -8,7 +8,7 @@ from scapy.layers.all import IP, Ether,ICMP, TCP
 import pydb
 import netifaces
 import OSC            # pyOSC
-
+import copy
 
 
 parser = OptionParser()
@@ -33,7 +33,6 @@ oc.connect(hostport)
 # global variables
 nw_traffic_in_global = {}
 nw_traffic_out_global = {}
-icmp_traffic_global = {}
 
 
 def main():
@@ -51,10 +50,8 @@ def main():
         p = pcapy.open_live(interface, 1024, False, 10240)
 
     # create and start threads
-    network_traffic = communication_thread("no_icmp")
+    network_traffic = communication_thread()
     network_traffic.start()
-    icmp_traffic = communication_thread("only_icmp")
-    icmp_traffic.start()
 
 
     try:
@@ -81,17 +78,21 @@ def main():
             second = header.getts()[0] # [1] = miliseconds
             (header, payload) = p.next()
     except KeyboardInterrupt:
-        print 'kbint %d' % kbints
-        kbints+=1
-        if kbints>2:
-            print 'quitting %d' % kbints
+        pass
+        # shut down
     except Exception,e:
         print e
     
+    try:
+        p.close()
+    except Exception,e:
+        print e
     
+    time.sleep(1)
     # setting status to false ends the threadss
+    print 'setting status'
     network_traffic.status = False
-    icmp_traffic.status = False
+    print 'set status'
     
     #bar.status = False
     print "goodbye"
@@ -99,59 +100,45 @@ def main():
 
 # thread class
 class communication_thread(Thread):
-    def __init__(self, mode):
+    def __init__(self):
         Thread.__init__(self)
-        self.mode = mode
         self.value = 1
 
-        # the interval in which the synchronized mode
-        # sends data to chuck in seconds.
-        self.interval = 1
-        # if status turns to False, thread will stop.
+        self.interval = 0.42
         self.status = True
         
     def run(self):
-        if self.mode == "only_icmp":
-            # asynchronus mode. get icmp packets and 
-            # send them directly to chuck via osc      
-            while self.status == True:
-                if icmp_traffic_global:            
-                    print "asynchronus. value: " + json.dumps(icmp_traffic_global)
-                    # send data to chuck
-                    # remove values in array
-                    icmp_traffic_global.clear()                
-
-        else:
-            # synchronus mode. every n (interval) seconds we send 
-            # the data to chuck
-            while self.status == True:
-                print "inbound : " + json.dumps(nw_traffic_in_global)
-                print "outbound: " + json.dumps(nw_traffic_out_global)
-                # send data to chuck
-                # remove values in array
-                s = 0
-                for key in nw_traffic_in_global.keys():
-                    value = nw_traffic_in_global[key]
-                    x = OSC.OSCMessage()
-                    x.setAddress('/plinker/in/port/%s' % key)
-                    x.append(value)
-                    oc.send(x)
-                    s+=value
-                for key in nw_traffic_out_global.keys():
-                    value = nw_traffic_out_global[key]
-                    x = OSC.OSCMessage()
-                    x.setAddress('/plinker/out/port/%s' % key)
-                    x.append(value)
-                    oc.send(x)
-                    s+=value
+        while self.status:
+            print self.status
+            traffic_in = copy.copy(nw_traffic_in_global)
+            traffic_out = copy.copy(nw_traffic_in_global)
+            nw_traffic_in_global.clear()
+            nw_traffic_out_global.clear()                
+            print "inbound : " + json.dumps(traffic_in)
+            print "outbound: " + json.dumps(traffic_out)
+            # send data to chuck
+            # remove values in array
+            s = 0
+            for key in traffic_in.keys():
+                value = traffic_in[key]
                 x = OSC.OSCMessage()
-                x.setAddress('/plinker/all')
-                x.append(s)
+                x.setAddress('/plinker/in/port/%s' % key)
+                x.append(value)
                 oc.send(x)
-                nw_traffic_in_global.clear()
-                nw_traffic_out_global.clear()                
-                # wait
-                time.sleep(self.interval)
+                s+=value
+            for key in traffic_out.keys():
+                value = traffic_out[key]
+                x = OSC.OSCMessage()
+                x.setAddress('/plinker/out/port/%s' % key)
+                x.append(value)
+                oc.send(x)
+                s+=value
+            x = OSC.OSCMessage()
+            x.setAddress('/plinker/all')
+            x.append(s)
+            oc.send(x)
+            # wait
+            time.sleep(self.interval)
 
 main()
 
