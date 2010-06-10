@@ -75,7 +75,6 @@ def main():
         kbints+=1
         if kbints>2:
             print 'quitting %d' % kbints
-            return
     except Exception,e:
         print e
     
@@ -119,7 +118,24 @@ class communication_thread(Thread):
                 print "inbound : " + json.dumps(nw_traffic_in_global)
                 print "outbound: " + json.dumps(nw_traffic_out_global)
                 # send data to chuck
-                # remove values in array                
+                # remove values in array
+                s = 0
+                for (key, value) in new_traffic_in_global:
+                    x = OSC.OSCMessage()
+                    x.setAddress('/plinker/in/port/%s' % key)
+                    x.append(value)
+                    oc.send(x)
+                    s+=value
+                for (key, value) in new_traffic_out_global:
+                    x = OSC.OSCMessage()
+                    x.setAddress('/plinker/out/port/%s' % key)
+                    x.append(value)
+                    oc.send(x)
+                    s+=value
+                x = OSC.OSCMessage()
+                x.setAddress('/plinker/all' % key)
+                x.append(s)
+                oc.send(x)
                 nw_traffic_in_global.clear()
                 nw_traffic_out_global.clear()                
                 # wait
