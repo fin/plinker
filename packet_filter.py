@@ -14,6 +14,8 @@ import OSC            # pyOSC
 parser = OptionParser()
 parser.add_option('-c', '--connect', default='localhost:9999', help='osc host:port to connect to')
 parser.add_option('-i', '--interface', default='eth0', help='network interface to listen on')
+parser.add_option('-f', '--file', default=None, help='pcap file to load instead of interface')
+parser.add_option('-a', '--interface_address', default='127.0.0.1', help='interface-address to help with incoming/outgoing sorting')
 
 (options, args) = parser.parse_args()
 print options
@@ -22,6 +24,8 @@ print args
 hostport = options.connect.split(':')
 hostport[1] = int(hostport[1])
 hostport = tuple(hostport)
+
+openfile = options.file
 
 oc = OSC.OSCClient()
 oc.connect(hostport)
@@ -35,9 +39,16 @@ icmp_traffic_global = {}
 def main():
     kbints = 0
 
-    # begin listening to network traffic
-    interface = options.interface
-    interface_address = netifaces.ifaddresses(interface)[2][0]['addr']
+    interface_address=options.interface_address
+
+    if openfile:
+        p = pcapy.open_offline(openfile)
+    else:
+        # begin listening to network traffic
+        interface = options.interface
+        interface_address = netifaces.ifaddresses(interface)[2][0]['addr']
+
+        p = pcapy.open_live(interface, 1024, False, 10240)
 
     # create and start threads
     network_traffic = communication_thread("no_icmp")
@@ -45,7 +56,6 @@ def main():
     icmp_traffic = communication_thread("only_icmp")
     icmp_traffic.start()
 
-    p = pcapy.open_live(interface, 1024, False, 10240)
 
     try:
         (header, payload) = p.next()
@@ -120,13 +130,15 @@ class communication_thread(Thread):
                 # send data to chuck
                 # remove values in array
                 s = 0
-                for (key, value) in nw_traffic_in_global.iteritems():
+                for key in nw_traffic_in_global.keys():
+                    value = nw_traffic_in_global[key]
                     x = OSC.OSCMessage()
                     x.setAddress('/plinker/in/port/%s' % key)
                     x.append(value)
                     oc.send(x)
                     s+=value
-                for (key, value) in nw_traffic_out_global.iteritems():
+                for key in nw_traffic_out_global.keys():
+                    value = nw_traffic_out_global[key]
                     x = OSC.OSCMessage()
                     x.setAddress('/plinker/out/port/%s' % key)
                     x.append(value)
