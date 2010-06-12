@@ -116,7 +116,7 @@ class communication_thread(Thread):
                          25: 'ftp', 26: 'ftp', 115: 'ftp', 445: 'ftp',  # 445 = samba
                          5222: 'chat', 5269: 'chat', 1863: 'chat', 5190: 'chat', 194: 'chat', 994: 'chat', '6667': 'chat',
                         }
-        self.defaultservice = 'all'
+        self.defaultservice = 'other'
         
     def run(self):
         oc = OSC.OSCClient()
@@ -158,6 +158,11 @@ class communication_thread(Thread):
             x = OSC.OSCMessage()
             x.setAddress('/plinker/inout') # no ,f; gets added automagically
             x.append(float(inout['in'])/float(inout['out'] or 1))
+            oc.send(x)
+            
+            x = OSC.OSCMessage()
+            x.setAddress('/plinker/count') # no ,f; gets added automagically
+            x.append(float(inout['in'])+float(inout['out']))
             oc.send(x)
 
             values_last = values
