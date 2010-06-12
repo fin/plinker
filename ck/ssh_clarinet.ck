@@ -1,7 +1,7 @@
 // OSC initialization
 OscRecv recv;
 // use port 6449 (or whatever)
-6449 => recv.port;
+9999 => recv.port;
 // start listening (launch thread)
 recv.listen();
 
