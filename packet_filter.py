@@ -148,7 +148,7 @@ class communication_thread(Thread):
             for (name, count) in values.iteritems():
                 if values.get(name, None):
                     x = OSC.OSCMessage()
-                    x.setAddress('/plinker/%s' % name)
+                    x.setAddress('/plinker/%s' % name) # no ,f; gets added automagically
                     print x.address
                     current = float(count)/(values_last.get(name, count) or 1)
                     x.append(current)
@@ -156,7 +156,7 @@ class communication_thread(Thread):
                     print (name, current,)
 
             x = OSC.OSCMessage()
-            x.setAddress('/plinker/inout')
+            x.setAddress('/plinker/inout') # no ,f; gets added automagically
             x.append(float(inout['in'])/float(inout['out'] or 1))
             oc.send(x)
 
