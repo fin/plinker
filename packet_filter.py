@@ -150,7 +150,7 @@ class communication_thread(Thread):
                     x = OSC.OSCMessage()
                     x.setAddress('/plinker/%s' % name)
                     print x.address
-                    current = count/(values_last.get(name, count) or 1)
+                    current = float(count)/(values_last.get(name, count) or 1)
                     x.append(current)
                     oc.send(x)
                     print (name, current,)
