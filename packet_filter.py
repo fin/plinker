@@ -65,7 +65,7 @@ def main():
                 nw_traffic_global.setdefault(t.dport,0)
                 try:
                     nw_traffic_global[t.dport]+=1
-                except KeyError, e:
+                except KeyError:
                     print 'race'
                 nw_traffic_inout['in' if i.dst == interface_address else 'out']+=1
                     
