@@ -7,8 +7,9 @@ import pcapy
 from scapy.layers.all import IP, Ether,ICMP, TCP
 import pydb
 import netifaces
-import OSC			  # pyOSC
+import OSC            # pyOSC
 import copy
+import traceback
 
 
 parser = OptionParser()
@@ -27,122 +28,147 @@ hostport = tuple(hostport)
 
 openfile = options.file
 
-oc = OSC.OSCClient()
-oc.connect(hostport)
-
 # global variables
-nw_traffic_in_global = {}
-nw_traffic_out_global = {}
+nw_traffic_global = {}
+nw_traffic_inout = {'in': 0, 'out': 0}
 
 
 def main():
-	kbints = 0
+    oc = OSC.OSCClient()
+    oc.connect(hostport)
 
-	interface_address=options.interface_address
+    kbints = 0
 
-	if openfile:
-		p = pcapy.open_offline(openfile)
-	else:
-		# begin listening to network traffic
-		interface = options.interface
-		interface_address = netifaces.ifaddresses(interface)[2][0]['addr']
+    interface_address=options.interface_address
 
-		p = pcapy.open_live(interface, 1024, False, 10240)
+    if openfile:
+        p = pcapy.open_offline(openfile)
+    else:
+        # begin listening to network traffic
+        interface = options.interface
+        interface_address = netifaces.ifaddresses(interface)[2][0]['addr']
 
-	# create and start threads
-	network_traffic = communication_thread()
-	network_traffic.start()
+        p = pcapy.open_live(interface, 1024, False, 10240)
+
+    # create and start threads
+    network_traffic = communication_thread()
+    network_traffic.start()
 
 
-	try:
-		(header, payload) = p.next()
-		while header:
-			e = Ether(payload)
-			t = e.getlayer(TCP)
-			if t:
-				i = e.getlayer(IP)
-				if i.dst==interface_address:
-					nw_traffic_in_global.setdefault(t.dport,0)
-					nw_traffic_in_global[t.dport]+=1
-				else:
-					nw_traffic_out_global.setdefault(t.dport,0)
-					nw_traffic_out_global[t.dport]+=1
-					
-			if e.haslayer(ICMP):
-				x = OSC.OSCMessage()
-				x.setAddress('/plinker/ping')
-				x.append(1)
-				oc.send(x)
-				print 'sent'
+    try:
+        (header, payload) = p.next()
+        while header:
+            e = Ether(payload)
+            t = e.getlayer(TCP)
+            if t:
+                i = e.getlayer(IP)
+                nw_traffic_global.setdefault(t.dport,0)
+                try:
+                    nw_traffic_global[t.dport]+=1
+                except KeyError:
+                    print 'race'
+                nw_traffic_inout['in' if i.dst == interface_address else 'out']+=1
+                    
+            if e.haslayer(ICMP):
+                x = OSC.OSCMessage()
+                x.setAddress('/plinker/ping')
+                x.append(1)
+                oc.send(x)
+                print 'sent'
 
-			second = header.getts()[0] # [1] = miliseconds
-			
-			try:
-				(header, payload) = p.next()
-			except Exception,e:
-				print type(e)
-	except KeyboardInterrupt:
-		pass
-		# shut down
-	except Exception,e:
-		print e
-	
-	try:
-		p.close()
-	except Exception,e:
-		print e
-	
-	time.sleep(1)
-	# setting status to false ends the threadss
-	print 'setting status'
-	network_traffic.status = False
-	print 'set status'
-	
-	#bar.status = False
-	print "goodbye"
-	oc.close()
+            second = header.getts()[0] # [1] = miliseconds
+            
+            try:
+                (header, payload) = p.next()
+            except Exception,e:
+                print type(e)
+    except Exception,e:
+        print traceback.print_exc(e)
+    except KeyboardInterrupt:
+        pass
+        # shut down
+    
+    try:
+        p.close()
+    except Exception,e:
+        print e
+    
+    time.sleep(1)
+    # setting status to false ends the threadss
+    print 'setting status'
+    network_traffic.status = False
+    print 'set status'
+    
+    #bar.status = False
+    print "goodbye"
+    oc.close()
 
 # thread class
 class communication_thread(Thread):
-	def __init__(self):
-		Thread.__init__(self)
-		self.value = 1
+    def __init__(self):
+        Thread.__init__(self)
+        self.value = 1
 
-		self.interval = 0.42
-		self.status = True
-		
-	def run(self):
-		while self.status:
-			print self.status
-			traffic_in = copy.copy(nw_traffic_in_global)
-			traffic_out = copy.copy(nw_traffic_in_global)
-			nw_traffic_in_global.clear()
-			nw_traffic_out_global.clear()				 
-			print "inbound : " + json.dumps(traffic_in)
-			print "outbound: " + json.dumps(traffic_out)
-			# send data to chuck
-			# remove values in array
-			s = 0
-			for key in traffic_in.keys():
-				value = traffic_in[key]
-				x = OSC.OSCMessage()
-				x.setAddress('/plinker/in/port/%s' % key)
-				x.append(value)
-				oc.send(x)
-				s+=value
-			for key in traffic_out.keys():
-				value = traffic_out[key]
-				x = OSC.OSCMessage()
-				x.setAddress('/plinker/out/port/%s' % key)
-				x.append(value)
-				oc.send(x)
-				s+=value
-			x = OSC.OSCMessage()
-			x.setAddress('/plinker/all')
-			x.append(s)
-			oc.send(x)
-			# wait
-			time.sleep(self.interval)
+        self.interval = 0.42
+        self.status = True
+        self.services = {80: 'web', 443: 'web',
+                         22: 'ssh',
+                         25: 'ftp', 26: 'ftp', 115: 'ftp', 445: 'ftp',  # 445 = samba
+                         5222: 'chat', 5269: 'chat', 1863: 'chat', 5190: 'chat', 194: 'chat', 994: 'chat', '6667': 'chat',
+                        }
+        self.defaultservice = 'other'
+        
+    def run(self):
+        oc = OSC.OSCClient()
+        oc.connect(hostport)
+        values_last = {}
+        while self.status:
+            traffic = copy.copy(nw_traffic_global)
+            inout = copy.copy(nw_traffic_inout)
+            nw_traffic_global.clear()
+            nw_traffic_inout.clear()
+            nw_traffic_inout['in']=0
+            nw_traffic_inout['out']=0
+
+            values = {}
+            for (name,value) in values_last.iteritems():
+                if value:
+                    values[name]=0
+            handledservices = []
+            # send data to chuck
+            # remove values in array
+            keys = traffic.keys()
+            for key in keys:
+                service = self.services.get(key, self.defaultservice)
+                current = float(traffic.get(key,0))
+                values.setdefault(service, 0.)
+                values[service]+=current
+                handledservices.append(service)
+
+            for (name, count) in values.iteritems():
+                if values.get(name, None):
+                    x = OSC.OSCMessage()
+                    x.setAddress('/plinker/%s' % name) # no ,f; gets added automagically
+                    print x.address
+                    current = float(count)/(values_last.get(name, count) or 1)
+                    x.append(current)
+                    oc.send(x)
+                    print (name, current,)
+
+            x = OSC.OSCMessage()
+            x.setAddress('/plinker/inout') # no ,f; gets added automagically
+            x.append(float(inout['in'])/float(inout['out'] or 1))
+            oc.send(x)
+            
+            x = OSC.OSCMessage()
+            x.setAddress('/plinker/count') # no ,f; gets added automagically
+            x.append(float(inout['in'])+float(inout['out']))
+            oc.send(x)
+
+            values_last = values
+
+            # wait
+            time.sleep(self.interval)
 
 main()
 
