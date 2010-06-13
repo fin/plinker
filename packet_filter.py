@@ -124,6 +124,8 @@ class communication_thread(Thread):
         oc.connect(hostport)
         values_last = {}
         while self.status:
+            print '----'
+            print values_last
             traffic = copy.copy(nw_traffic_global)
             inout = copy.copy(nw_traffic_inout)
             nw_traffic_global.clear()
@@ -154,7 +156,7 @@ class communication_thread(Thread):
                     current = float(count)/(values_last.get(name, count) or 1)
                     x.append(current)
                     oc.send(x)
-                    print (name, current,)
+                    print (name, current, count, values_last.get(name, None))
 
             x = OSC.OSCMessage()
             x.setAddress('/plinker/inout') # no ,f; gets added automagically
