@@ -81,7 +81,8 @@ def main():
             try:
                 (header, payload) = p.next()
             except Exception,e:
-                print type(e)
+                pass
+				#print type(e)
     except Exception,e:
         print traceback.print_exc(e)
     except KeyboardInterrupt:
@@ -114,7 +115,7 @@ class communication_thread(Thread):
         self.services = {80: 'web', 443: 'web',
                          22: 'ssh',
                          25: 'ftp', 26: 'ftp', 115: 'ftp', 445: 'ftp',  # 445 = samba
-                         5222: 'chat', 5269: 'chat', 1863: 'chat', 5190: 'chat', 194: 'chat', 994: 'chat', '6667': 'chat',
+                         5222: 'chat', 5269: 'chat', 1863: 'chat', 5190: 'chat', 194: 'chat', 994: 'chat', 6667: 'chat',
                         }
         self.defaultservice = 'other'
         
