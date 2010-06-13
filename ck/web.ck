@@ -14,12 +14,9 @@ recv.listen();
 viertel => dur web_duration;
 
 
+
 // create an address in the receiver, store in new variable
-<<<<<<< HEAD
-recv.event( "/plinker/web, f" ) @=> OscEvent @ oeWeb;
-=======
 recv.event( "/plinker/web,f" ) @=> OscEvent @ oeWeb;
->>>>>>> e4a5f290b70bcc66b71b40061950082529b4c542
 
 Rhodey voc=> JCRev r => Echo a => Echo b => Echo c => dac;
     
@@ -30,35 +27,9 @@ while(true){
 }
 
 fun void web_listener(){
-   
-   //debug
-   [ 0.5, 2.2, 0.7, 1.0, 1.0, 0.3, 1.3, 2 ] @=> float changes[]; 
-    
    spork ~ web_player();
-   0.8 => float vocgain;
    
-   
-   1 => int i;
    while(true){
-<<<<<<< HEAD
-   //     oeWeb => now;
-        
-   //     while( oeWeb.nextMsg() )
-   //     { 
-   
-   
-   changes[i] => float outFactor;
-            
-            changes[i] * web_duration => web_duration;
-            <<<web_duration>>>;
-            i + 1 => i;
-            if(i > 28){1 => i; viertel => web_duration;}
-            outFactor * vocgain => voc.gain;
-            
-            <<< "Float: " + outFactor>>>;
-            web_duration => now;
-   //     }
-=======
        <<< "trying recv" >>>;
         oeWeb => now;
         <<< "recv" >>>;
@@ -69,9 +40,7 @@ fun void web_listener(){
             <<< "Float: " + factor >>>;
             
         }
->>>>>>> e4a5f290b70bcc66b71b40061950082529b4c542
         
-        //<<< web_duration >>>;
     }
 }
 
@@ -96,4 +65,3 @@ fun void web_player(){
         }
         
     }
-}
