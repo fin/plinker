@@ -20,6 +20,8 @@ recv.event( "/plinker/count,f" ) @=> OscEvent @ oeDrumLayers;
 recv.event( "/plinker/chat,f" ) @=> OscEvent @ oeChat;
 recv.event( "/plinker/web,f" ) @=> OscEvent @ oeWeb;
 recv.event( "/plinker/ssh, f" ) @=> OscEvent @ oeSSH;
+recv.event( "/plinker/ping,i" ) @=> OscEvent @ oePing;
+
 
 
 /*=== END LISTENERS ===*/
@@ -102,6 +104,7 @@ Rhodey voc=> JCRev r => Echo a => Echo b => Echo c => dac;
 /*=== SPORKS ===*/
 
 spork ~ play_drums();
+spork ~ listen_ping();
 spork ~ inout_listener();
 spork ~ count_listener();
 spork ~ chat_listener();
@@ -142,7 +145,7 @@ fun void chat_listener(){
     { 
         oeChat.getFloat() => float chatfactor;
         //Std.rand2f(0.0,4.0) => float factor;
-        <<<"CHAT: " + chatfactor>>>;
+  //      <<<"CHAT: " + chatfactor>>>;
         if(chatfactor >= 1.0){glob_chat + 1 => glob_chat;}
         if(chatfactor < 1.0){glob_chat - 1 => glob_chat;}
         if(glob_chat < 0){ 0 => glob_chat;}
@@ -150,7 +153,7 @@ fun void chat_listener(){
         if(glob_chat > 0){ 0.8 => chatgain;}
         
         
-        <<<"GlobChat: " + glob_chat + "   Factor: " + chatfactor>>>;
+//        <<<"GlobChat: " + glob_chat + "   Factor: " + chatfactor>>>;
         
     }
 }
@@ -289,11 +292,39 @@ fun void web_player(){
 
 /*=== END WEB FUNCS ===*/
 
+/*=== PING FUNC ===*/
+
+fun void listen_ping(){
+    
+    SndBuf ping;
+    "ping.wav" => ping.read;
+    //1 => ping.loop;
+    0 => ping.gain;
+
+    ping =>  dac;
+                
+    while( true )
+    {
+        oePing => now;
+//      <<< "ping" >>>;
+        while( oePing.nextMsg() )
+        { 
+            
+            0.5 => ping.gain;
+            <<< "ping" >>>;
+            0 => ping.pos;
+            //halbe - (now % halbe) => now; //synch am taktbeginn
+            viertel => now;
+            0 => ping.gain;
+        }
+    }
+}
 
 
 
 
 
+/*=== END PING FUNC ===*/
 
 /*===  SSH FUNCS ===*/
 
