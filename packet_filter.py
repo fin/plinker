@@ -9,6 +9,7 @@ import pydb
 import netifaces
 import OSC            # pyOSC
 import copy
+import traceback
 
 
 parser = OptionParser()
@@ -27,14 +28,15 @@ hostport = tuple(hostport)
 
 openfile = options.file
 
-oc = OSC.OSCClient()
-oc.connect(hostport)
-
 # global variables
 nw_traffic_global = {}
+nw_traffic_inout = {'in': 0, 'out': 0}
 
 
 def main():
+    oc = OSC.OSCClient()
+    oc.connect(hostport)
+
     kbints = 0
 
     interface_address=options.interface_address
@@ -61,7 +63,11 @@ def main():
             if t:
                 i = e.getlayer(IP)
                 nw_traffic_global.setdefault(t.dport,0)
-                nw_traffic_global[t.dport]+=1
+                try:
+                    nw_traffic_global[t.dport]+=1
+                except KeyError:
+                    print 'race'
+                nw_traffic_inout['in' if i.dst == interface_address else 'out']+=1
                     
             if e.haslayer(ICMP):
                 x = OSC.OSCMessage()
@@ -75,12 +81,13 @@ def main():
             try:
                 (header, payload) = p.next()
             except Exception,e:
-                print type(e)
+                pass
+				#print type(e)
+    except Exception,e:
+        print traceback.print_exc(e)
     except KeyboardInterrupt:
         pass
         # shut down
-    except Exception,e:
-        print e
     
     try:
         p.close()
@@ -108,15 +115,21 @@ class communication_thread(Thread):
         self.services = {80: 'web', 443: 'web',
                          22: 'ssh',
                          25: 'ftp', 26: 'ftp', 115: 'ftp', 445: 'ftp',  # 445 = samba
-                         5222: 'chat', 5269: 'chat', 1863: 'chat', 5190: 'chat', 194: 'chat', 994: 'chat', '6667': 'chat',
+                         5222: 'chat', 5269: 'chat', 1863: 'chat', 5190: 'chat', 194: 'chat', 994: 'chat', 6667: 'chat',
                         }
-        self.defaultservice = 'all'
+        self.defaultservice = 'other'
         
     def run(self):
+        oc = OSC.OSCClient()
+        oc.connect(hostport)
         values_last = {}
         while self.status:
             traffic = copy.copy(nw_traffic_global)
+            inout = copy.copy(nw_traffic_inout)
             nw_traffic_global.clear()
+            nw_traffic_inout.clear()
+            nw_traffic_inout['in']=0
+            nw_traffic_inout['out']=0
 
             values = {}
             for (name,value) in values_last.iteritems():
@@ -136,11 +149,22 @@ class communication_thread(Thread):
             for (name, count) in values.iteritems():
                 if values.get(name, None):
                     x = OSC.OSCMessage()
-                    x.setAddress('/plinker/%s' % name)
-                    current = count/values_last.get(name, count)
+                    x.setAddress('/plinker/%s' % name) # no ,f; gets added automagically
+                    print x.address
+                    current = float(count)/(values_last.get(name, count) or 1)
+                    x.append(current)
                     oc.send(x)
                     print (name, current,)
 
+            x = OSC.OSCMessage()
+            x.setAddress('/plinker/inout') # no ,f; gets added automagically
+            x.append(float(inout['in'])/float(inout['out'] or 1))
+            oc.send(x)
+            
+            x = OSC.OSCMessage()
+            x.setAddress('/plinker/count') # no ,f; gets added automagically
+            x.append(float(inout['in'])+float(inout['out']))
+            oc.send(x)
 
             values_last = values
 

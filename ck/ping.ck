@@ -13,12 +13,12 @@ OscRecv recv;
 recv.listen();
 
 // create an address in the receiver, store in new variable
-recv.event( "/plinker/ping, i" ) @=> OscEvent @ oe;
+recv.event( "/plinker/ping,i" ) @=> OscEvent @ oe;
 
 while( true )
 {
     oe => now;
-        <<< "ping" >>>;
+    <<< "ping" >>>;
 
     while( oe.nextMsg() )
     { 
