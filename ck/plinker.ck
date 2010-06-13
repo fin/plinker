@@ -19,6 +19,8 @@ recv.event( "/plinker/inout,f" ) @=> OscEvent @ oeDrumFilter;
 recv.event( "/plinker/count,f" ) @=> OscEvent @ oeDrumLayers;
 recv.event( "/plinker/chat,f" ) @=> OscEvent @ oeChat;
 recv.event( "/plinker/web,f" ) @=> OscEvent @ oeWeb;
+recv.event( "/plinker/ssh, f" ) @=> OscEvent @ oeSSH;
+
 
 /*=== END LISTENERS ===*/
 
@@ -104,6 +106,7 @@ spork ~ inout_listener();
 spork ~ count_listener();
 spork ~ chat_listener();
 spork ~ web_listener();
+spork ~listen_ssh_keyboard();
 
 /*=== END SPORKS ===*/
 
@@ -193,7 +196,7 @@ fun void chat_player(){
         1::minute/140 => now;    
         if(chatgain > 0.1){
             chatgain - 0.1 => chatgain;}
-        <<<"CHATGAIN: " + chatgain>>>;
+        //<<<"CHATGAIN: " + chatgain>>>;
         
 //        0.0 => Chatter[0].gain;
 //        0.0 => Chatter[1].gain;
@@ -290,6 +293,58 @@ fun void web_player(){
 
 
 
+
+
+/*===  SSH FUNCS ===*/
+
+fun void listen_ssh_keyboard()
+{
+    // spork the player.
+    //spork ~play_ssh_clarinet();
+    
+    float ssh_packets;
+    float gain;
+    
+    while (true)
+    {
+        oeSSH => now;
+        
+        // listen to osc
+        while (oeSSH.nextMsg() )
+        {
+            oeSSH.getFloat() => ssh_packets;
+            if (ssh_packets > 1.0)
+                0.5 + ( 0.1 * ssh_packets $ int) => gain;
+            else
+                0.3 => gain;
+            
+            if (gain > 0.8)
+                0.8 => gain;
+            
+            spork ~play_ssh_keyboard(gain);
+            
+            <<< "ssh_value:" + ssh_packets >>>;
+            <<< "gain:" + gain >>>;
+            
+        }
+    }
+    
+}
+
+fun void play_ssh_keyboard(float gainor)
+{
+    SndBuf keyboard_buffer;
+    // keyboard buffer
+    "keyboard2.wav" => keyboard_buffer.read;
+    gainor => keyboard_buffer.gain;
+    0 => keyboard_buffer.loop;
+    keyboard_buffer => dac;
+    
+    5::second => now;
+}
+
+
+/*=== END SSH FUNCS ===*/
 
 
 
@@ -433,4 +488,6 @@ fun void inout_listener()
         }
     }
 }
+
+
 
