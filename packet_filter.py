@@ -74,7 +74,7 @@ def main():
                 x.setAddress('/plinker/ping')
                 x.append(1)
                 oc.send(x)
-                print 'sent'
+                print 'ICMP ping sent'
 
             second = header.getts()[0] # [1] = miliseconds
             
@@ -82,7 +82,7 @@ def main():
                 (header, payload) = p.next()
             except Exception,e:
                 pass
-				#print type(e)
+                #print type(e)
     except Exception,e:
         print traceback.print_exc(e)
     except KeyboardInterrupt:
@@ -124,8 +124,8 @@ class communication_thread(Thread):
         oc.connect(hostport)
         values_last = {}
         while self.status:
-            print '----'
-            print values_last
+            #print '----'
+            #print values_last
             traffic = copy.copy(nw_traffic_global)
             inout = copy.copy(nw_traffic_inout)
             nw_traffic_global.clear()
@@ -149,13 +149,13 @@ class communication_thread(Thread):
                 handledservices.append(service)
 
             for (name, count) in values.iteritems():
-                if values.get(name, None):
-                    x = OSC.OSCMessage()
-                    x.setAddress('/plinker/%s' % name) # no ,f; gets added automagically
-                    print x.address
-                    current = float(count)/(values_last.get(name, count) or 1)
-                    x.append(current)
-                    oc.send(x)
+                x = OSC.OSCMessage()
+                x.setAddress('/plinker/%s' % name) # no ,f; gets added automagically
+                #print x.address
+                current = float(count)/(values_last.get(name, count) or 1)
+                x.append(current)
+                oc.send(x)
+                if(name == 'chat'):
                     print (name, current, count, values_last.get(name, None))
 
             x = OSC.OSCMessage()
@@ -169,7 +169,6 @@ class communication_thread(Thread):
             oc.send(x)
 
             values_last = values
-
             # wait
             time.sleep(self.interval)
 

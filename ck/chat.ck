@@ -42,7 +42,7 @@ fun void chat_listener(){
         oeChat.getFloat() => float factor;
 
         //Std.rand2f(0.0,4.0) => float factor;
-        <<<factor>>>;
+        <<<"WEB: " + factor>>>;
         if(factor > 2.0){glob_chat + 1 => glob_chat;}
         if(factor < 0.5){glob_chat - 1 => glob_chat;}
         if(glob_chat < 0){ 0 => glob_chat;}
