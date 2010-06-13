@@ -1,0 +1,17 @@
+Hello.
+
+this is plinker.
+
+packet_filter.py listens to traffic, analyzes it (a bit) and sends statistic information via OSC
+
+ck/plinker is a chuck program that turns that information into sound
+
+
+we use:
+* chuck [http://chuck.cs.princeton.edu/]
+* pcapy
+* pyOSC
+* scapy
+
+video demonstration:
+* http://chuck.cs.princeton.edu/
